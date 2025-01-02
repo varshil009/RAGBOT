@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGBOT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="chat-column">
+            <h1>RAGBOT</h1>
+            <div id="upload-section">
+                <p>Please upload a PDF to start chatting.</p>
+                <input type="file" id="pdf-upload" accept=".pdf">
+                <button onclick="uploadPDF()">Upload PDF</button>
+            </div>
+            <div id="processing-message" style="display: none;">
+                <p>PDF is loading...</p>
+            </div>
+            <div id="chat-interface" style="display: none;">
+                <div id="chat-messages"></div>
+                <input type="text" id="question-input" placeholder="Ask a question...">
+                <button onclick="askQuestion()">Send</button>
+            </div>
+        </div>
+        <div class="pdf-column">
+            <iframe id="pdf-viewer"></iframe>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
