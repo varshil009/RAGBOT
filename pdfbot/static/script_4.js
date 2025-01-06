@@ -2,22 +2,14 @@
 let pdfViewerReady = false;
 let pdfViewer = null;
 
-// Stop words list for highlighting
-const STOP_WORDS = new Set([
-    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
-    'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
-    'will', 'with', 'the', 'this', 'but', 'they', 'have', 'had', 'what', 'when',
-    'where', 'who', 'which', 'why', 'how'
-]);
-
 window.addEventListener('message', function(event) {
     // Store the PDF viewer reference when it's ready
     if (event.data && event.data.type === 'READY') {
         pdfViewer = document.getElementById('pdf-viewer').contentWindow;
-        pdfViewerReady = true;
     }
 });
 
+// Modified uploadPDF function
 function uploadPDF() {
     const fileInput = document.getElementById('pdf-upload');
     if (!fileInput.files || !fileInput.files[0]) {
@@ -91,7 +83,7 @@ function askQuestion() {
             addImage(data.image);
         }
         if (data.page_numbers && data.page_numbers.length > 0) {
-            addPageNavigation(data.page_numbers, data.answer);
+            addPageNavigation(data.page_numbers);
         }
     })
     .catch(error => console.error('Error:', error));
@@ -121,7 +113,8 @@ function addImage(imageBase64) {
     img.scrollIntoView({ behavior: "smooth" });
 }
 
-function addPageNavigation(pageNumbers, answerText) {
+// Modified addPageNavigation function
+function addPageNavigation(pageNumbers) {
     const navContainer = document.createElement('div');
     navContainer.className = 'page-navigation';
 
@@ -130,7 +123,7 @@ function addPageNavigation(pageNumbers, answerText) {
         button.textContent = `Page ${page}`;
         button.onclick = () => {
             if (pdfViewerReady) {
-                jumpToPageAndHighlight(page, answerText);
+                jumpToPage(page);
             } else {
                 console.log('PDF viewer not ready yet');
             }
@@ -142,77 +135,27 @@ function addPageNavigation(pageNumbers, answerText) {
     navContainer.scrollIntoView({ behavior: "smooth" });
 }
 
-function jumpToPageAndHighlight(pageNumber, answerText) {
+// Modified jumpToPage function
+function jumpToPage(pageNumber) {
     const viewer = document.getElementById('pdf-viewer');
-    if (!viewer || !pdfViewerReady) return;
+    if (!viewer) return;
 
+    // Convert pageNumber to integer
     pageNumber = parseInt(pageNumber);
     
     try {
-        // Wait for page to be rendered before attempting to highlight
-        viewer.contentWindow.PDFViewerApplication.pdfViewer.eventBus.on('pagerendered', function(evt) {
-            if (evt.pageNumber === pageNumber) {
-                highlightTextOnPage(pageNumber, answerText);
-            }
-        });
+        // Try multiple methods to change page
+        viewer.contentWindow.postMessage({
+            type: 'jumpToPage',
+            pageNumber: pageNumber   // PDF.js uses 0-based page numbers
+        }, '*');
 
-        // Jump to the specified page
-        viewer.contentWindow.PDFViewerApplication.page = pageNumber;
+        // Also try direct PDFViewerApplication access
+        if (viewer.contentWindow.PDFViewerApplication) {
+            viewer.contentWindow.PDFViewerApplication.page = pageNumber;
+        }
     } catch (error) {
         console.error('Error jumping to page:', error);
-    }
-}
-
-function highlightTextOnPage(pageNumber, answerText) {
-    const viewer = document.getElementById('pdf-viewer');
-    if (!viewer || !answerText) return;
-
-    try {
-        const pageDiv = viewer.contentWindow.document.querySelector(`[data-page-number="${pageNumber}"]`);
-        if (!pageDiv) return;
-
-        // Remove previous highlights
-        const previousHighlights = pageDiv.querySelectorAll('.highlight-text');
-        previousHighlights.forEach(highlight => highlight.remove());
-
-        // Process the answer text to get meaningful words
-        const wordsToHighlight = answerText
-            .toLowerCase()
-            .split(/\s+/)
-            .filter(word => {
-                // Remove punctuation and check if it's not a stop word
-                const cleanWord = word.replace(/[.,!?;:()"']/g, '');
-                return cleanWord.length > 2 && !STOP_WORDS.has(cleanWord);
-            });
-
-        const textLayer = pageDiv.querySelector('.textLayer');
-        if (!textLayer) return;
-
-        const textElements = textLayer.querySelectorAll('span');
-        textElements.forEach(span => {
-            const spanText = span.textContent.toLowerCase();
-            
-            // Check if any of our words to highlight appear in this span
-            const shouldHighlight = wordsToHighlight.some(word => 
-                spanText.includes(word)
-            );
-
-            if (shouldHighlight) {
-                const highlightDiv = document.createElement('div');
-                highlightDiv.className = 'highlight-text';
-                
-                const rect = span.getBoundingClientRect();
-                
-                highlightDiv.style.left = `${span.offsetLeft}px`;
-                highlightDiv.style.top = `${span.offsetTop}px`;
-                highlightDiv.style.width = `${rect.width}px`;
-                highlightDiv.style.height = `${rect.height}px`;
-                
-                textLayer.appendChild(highlightDiv);
-            }
-        });
-    } catch (error) {
-        console.error('Error highlighting text:', error);
     }
 }
 
@@ -230,15 +173,3 @@ window.addEventListener('message', function(event) {
         pdfViewer = document.getElementById('pdf-viewer').contentWindow;
     }
 });
-
-// Add CSS for highlights
-const style = document.createElement('style');
-style.textContent = `
-.highlight-text {
-    position: absolute;
-    background-color: yellow;
-    opacity: 0.5;
-    pointer-events: none;
-    mix-blend-mode: multiply;
-}`;
-document.head.appendChild(style);
