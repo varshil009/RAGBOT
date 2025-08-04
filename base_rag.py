@@ -219,7 +219,7 @@ class embedd:
 class LLM:
   def __init__(self):
     print("==> LLM initiating")
-    self.key = "AIzaSyCi7BI40L6gW6y1JHhT0XM53mhbqDKvLto"
+    self.key = ""
     self.url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={self.key}'
     self.headers = {'Content-Type': 'application/json'}
     self.query = None
